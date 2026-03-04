@@ -58,7 +58,6 @@ BTN12_SFUNCTION  109 # dec rf target by 10 cm (down)
 BTN13_SFUNCTION  111 # inc fwd speed by 10 cms (right)
 BTN14_SFUNCTION  110 # dec fwd speed by 10 cms (left)
 ~~~
+Note: some parameter names and units have changed since this live test.
 
 A trimmed dataflash log for the 7-Jan-2026 test is available [here](logs/00000029_filtered.BIN).
-
-The upshot is that GUIDED mode with the ABOVE_TERRAIN frame is an improvement over SURFTRAK mode.

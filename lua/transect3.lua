@@ -23,9 +23,9 @@
 ]]--
 
 local surftrak_depth_p = Parameter()
-local wpnav_speed_p = Parameter()
+local wp_spd_p = Parameter()
 
-if not surftrak_depth_p:init('SURFTRAK_DEPTH') or not wpnav_speed_p:init('WPNAV_SPEED') then
+if not surftrak_depth_p:init('SURFTRAK_DEPTH') or not wp_spd_p:init('WP_SPD') then
   gcs:send_text(3, "transect.lua: parameters missing, exit")
   return
 end
@@ -37,9 +37,9 @@ local GUIDED_MODE_NUM = 4       -- sub GUIDED mode number
 local SURFTRAK_MODE_NUM = 21    -- sub SURFTRAK mode number
 local ROTATION_PITCH_270 = 25   -- down-facing
 
-local SPEED_INC_CMS = 10        -- inc / dec WPNAV_SPEED by this amount per button press
-local SPEED_MIN_CMS = 10
-local SPEED_MAX_CMS = 150
+local SPEED_INC_MS = 0.1        -- inc / dec WP_SPD by this amount per button press
+local SPEED_MIN_MS = 0.1
+local SPEED_MAX_MS = 1.5
 
 local RF_TARGET_INC = 0.1       -- inc / dec rf_target by this amount per button press
 local RF_TARGET_MIN = 0.5
@@ -79,12 +79,12 @@ local function respond_to_joystick_buttons()
     count[i] = sub:get_and_clear_button_count(i)
   end
 
-  -- Increment or decrement WPNAV_SPEED
+  -- Increment or decrement WP_SPD
   -- Changes take effect the next time the pilot enters GUIDED mode
   local net_inc = count[BTN_INC_SPEED] - count[BTN_DEC_SPEED]
   if net_inc ~= 0 then
-    wpnav_speed_p:set(clamp(wpnav_speed_p:get() + net_inc * SPEED_INC_CMS, SPEED_MIN_CMS, SPEED_MAX_CMS))
-    gcs:send_text(6, string.format("transect.lua: change WPNAV_SPEED to %.0f cms", wpnav_speed_p:get()))
+    wp_spd_p:set(clamp(wp_spd_p:get() + net_inc * SPEED_INC_MS, SPEED_MIN_MS, SPEED_MAX_MS))
+    gcs:send_text(6, string.format("transect.lua: change WP_SPD to %.2f ms", wp_spd_p:get()))
   end
 
   if rf_target == nil then
@@ -100,7 +100,7 @@ end
 
 local function set_posvel_target(pos)
   -- Call vehicle:set_target_posvel_terrain, return true if successful
-  local vel_fwd = wpnav_speed_p:get() * 0.01
+  local vel_fwd = wp_spd_p:get()
   local heading = ahrs:get_yaw_rad()
 
   -- Project forward along heading to calc target xy position
