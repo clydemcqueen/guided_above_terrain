@@ -60,6 +60,8 @@ local BTN_DEC_RF_TARGET = 2     -- Lua indices 1..4 map to joystick button funct
 local BTN_INC_SPEED = 3
 local BTN_DEC_SPEED = 4
 
+local ABOVE_TERRAIN = 3
+
 local rf_target                 -- rangefinder target
 local running = false           -- if true, we are running the update loop at 10Hz
 local in_control = false        -- if true, we are sending posvel targets at 10Hz
@@ -125,7 +127,7 @@ local function set_posvel_target(pos)
     target_vel:y(vel_fwd * math.sin(heading))
     target_vel:z(0)
 
-    if not vehicle:set_target_posvel_terrain(target_pos, target_vel) then
+    if not vehicle:set_target_posvel_NED(target_pos, target_vel, ABOVE_TERRAIN) then
         gcs:send_text(3, "transect.lua: failed to set target posvel")
     end
 end

@@ -50,6 +50,8 @@ local BTN_DEC_RF_TARGET = 2     -- Lua indices 1..4 map to joystick button funct
 local BTN_INC_SPEED = 3
 local BTN_DEC_SPEED = 4
 
+local ABOVE_TERRAIN = 3
+
 local prev_mode                 -- track mode changes
 local rf_target                 -- rangefinder target
 
@@ -113,7 +115,7 @@ local function set_posvel_target(pos)
   target_vel:y(vel_fwd * math.sin(heading))
   target_vel:z(0)
 
-  return vehicle:set_target_posvel_terrain(target_pos, target_vel)
+  return vehicle:set_target_posvel_NED(target_pos, target_vel, ABOVE_TERRAIN)
 end
 
 local function update_guided_mode(rf_reading)
