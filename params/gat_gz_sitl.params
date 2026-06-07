@@ -1,20 +1,20 @@
 # Parameters to test transect.lua in Gazebo
 
 # Setup is mostly described in bluerov2_gz README. My super-terse notes:
-# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, ping_sonar}; set up env vars, cp transect.lua to scripts dir
+# Use colcon to build ardupilot_gazebo -b ros2, bluerov2_gz; set up env vars, cp get_rangefinder.lua and transect.lua to scripts dir
 
 # Shells:
-# gz sim -v 3 -r sensor.world
+# gz sim -v 3 -r bluerov2_ping.world
 # ../Tools/autotest/sim_vehicle.py -L RATBeach -v ArduSub -f vectored --model=JSON --out=udp:0.0.0.0:14550 --wipe --add-param-file=$HOME/projects/guided_above_terrain/params/gat_gz_sitl.params
-# ./QGroundControl.AppImage
+# ./QGroundControl.AppImage (to use the joystick)
 
 SCR_ENABLE 1
 
-RNGFND1_TYPE        100
-RNGFND1_FUNCTION    0
-RNGFND1_MAX         50
-RNGFND1_MIN         0.5
-RNGFND1_ORIENT      25
+RNGFND2_TYPE        100
+RNGFND2_FUNCTION    0
+RNGFND2_MAX         50
+RNGFND2_MIN         0.5
+RNGFND2_ORIENT      25
 
 BTN0_FUNCTION       1.0         # shift
 BTN11_SFUNCTION     108         # shift-dpad-up      script_1: increment rf_target by 10 cm
