@@ -28,7 +28,6 @@
     param set BTN13_SFUNCTION  111         # shift-dpad-right   script_4: increment speed by 10 cm/s
     param set BTN14_SFUNCTION  110         # shift-dpad-left    script_3: decrement speed by 10 cm/s
     param set BTN2_SFUNCTION   11          # shift-X            GUIDED mode
-
 ]]--
 
 local SURFTRAK_DEPTH = Parameter()
@@ -105,7 +104,7 @@ local function respond_to_joystick_buttons()
     end
 end
 
-local function set_posvel_target(pos)
+local function set_pos_target(pos)
     -- Do not try to set the target if the rangefinder is unhealthy to avoid spamming the pilot
     -- The rangefinder may time out every 10s, see https://github.com/bluerobotics/BlueOS-Water-Linked-DVL/issues/44
     if not sub:rangefinder_alt_ok() then
@@ -115,20 +114,21 @@ local function set_posvel_target(pos)
     local vel_fwd = WP_SPD:get()
     local heading = ahrs:get_yaw_rad()
 
-    -- project forward along heading to calc target xy position
+    -- Project forward along heading to calc target xy position
     local dist = vel_fwd * FUTURE_S
     local target_pos = Vector3f()
     target_pos:x(pos:x() + dist * math.cos(heading))
     target_pos:y(pos:y() + dist * math.sin(heading))
-    target_pos:z(rf_target)
 
-    local target_vel = Vector3f()
-    target_vel:x(vel_fwd * math.cos(heading))
-    target_vel:y(vel_fwd * math.sin(heading))
-    target_vel:z(0)
+    -- Set target rangefinder
+    target_pos:z(-rf_target)
 
-    if not vehicle:set_target_posvel_NED(target_pos, target_vel, ABOVE_TERRAIN) then
-        gcs:send_text(3, "transect.lua: failed to set target posvel")
+    -- use_yaw = false
+    -- use_yaw_rate = false
+    -- relative_yaw = false
+    -- is_terrain_alt = true
+    if not vehicle:set_target_pos_NED(target_pos, false, 0, false, 0, false, true) then
+        gcs:send_text(3, "transect.lua: failed to set target pos")
     end
 end
 
@@ -175,7 +175,7 @@ local function update()
         end
 
         if in_control then
-            set_posvel_target(pos)
+            set_pos_target(pos)
         end
 
     else -- disarmed, wrong mode, too close to the surface

@@ -27,3 +27,6 @@ WP_SPD 0.2
 # Meters
 RNGFND1_MIN 0.2
 RNGFND1_MAX 50.0
+
+# For new_pos: disable WPNavUsedForPosControl
+GUID_OPTIONS 0
