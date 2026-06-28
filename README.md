@@ -44,7 +44,7 @@ We ran the following tests:
 
 We also ran several live tests with a BlueROV2 off Pier 59 in Seattle, using these parameters:
 ~~~
-PSC_JERK_Z 8.0          # force KPa = 1.6, KPv = 0.8
+PSC_JERK_D 8.0          # force KPa = 1.6, KPv = 0.8
 PILOT_ACCEL_Z 500
 WPNAV_ACCEL_Z 500
 SURFTRAK_DEPTH -100     # min surftrak depth 1m

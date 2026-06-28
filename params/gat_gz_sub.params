@@ -1,11 +1,11 @@
-# Parameters to test transect.lua in Gazebo
+# Parameters to test gat_pva_sub.lua in Gazebo
 
 # Setup is mostly described in bluerov2_gz README. My super-terse notes:
-# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, ping_sonar}; set up env vars, cp transect.lua to scripts dir
+# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, ping_sonar}; set up env vars, cp gat_pva_sub.lua to scripts dir
 
 # Shells:
-# gz sim -v 3 -r sensor.world
-# ../Tools/autotest/sim_vehicle.py -L RATBeach -v ArduSub -f vectored --model=JSON --out=udp:0.0.0.0:14550 --wipe --add-param-file=$HOME/projects/guided_above_terrain/params/gat_gz_sitl.params
+# gz sim -v 3 -r bluerov2_ping.world
+# ../Tools/autotest/sim_vehicle.py -L RATBeach -v ArduSub -f vectored --model=JSON --out=udp:0.0.0.0:14550 --wipe --add-param-file=$HOME/projects/guided_above_terrain/params/gat_gz_sub.params
 # ./QGroundControl.AppImage
 
 SCR_ENABLE 1
@@ -24,7 +24,10 @@ BTN14_SFUNCTION     110         # shift-dpad-left    script_3: decrement speed b
 BTN2_SFUNCTION      11          # shift-X            GUIDED mode
 BTN3_SFUNCTION      13          # shift-Y            SURFTRAK mode
 
-# Meters per second
+# Reduce baro noise
+SIM_BARO_RND 0.02
+
+# Set reasonable GUIDED mode speeds
 WP_SPD_DN 0.3
 WP_SPD_UP 0.3
 WP_SPD 0.2

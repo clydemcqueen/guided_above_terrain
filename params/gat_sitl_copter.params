@@ -1,0 +1,47 @@
+# Parameters to test gat_pva_copter.lua in SITL (sans Gazebo)
+
+# Shells:
+# ../Tools/autotest/sim_vehicle.py -v copter --wipe --map --console --add-param-file=$HOME/projects/guided_above_terrain/params/gat_sitl_copter.params
+
+# Scripts:
+# mkdir scripts; cd scripts
+# ln -s $HOME/projects/guided_above_terrain/lua/get_rangefinder.lua get_rangefinder.lua
+# ln -s $HOME/projects/guided_above_terrain/lua/gat_pva_copter.lua gat_pva_copter.lua
+
+# Wait for GPS aiding, then take off:
+# mode guided
+# arm throttle
+# takeoff 20
+
+# Activate the script:
+# rc 6 2000
+
+# Turn a bit:
+# rc 4 1540
+# rc 4 1500
+
+# Deactivate:
+# rc 6 1000
+
+# Enable scripting
+SCR_ENABLE 1
+
+# Set the WP speeds
+WP_SPD_DN 1.0
+WP_SPD_UP 1.0
+WP_SPD 5.0
+
+# Enable a rangefinder in SITL
+RNGFND1_TYPE 100
+RNGFND1_ORIENT 25
+RNGFND1_MIN 0.2
+RNGFND1_MAX 50.0
+
+# Turn off the terrain cache
+TERRAIN_ENABLE 0
+
+# Add an RC aux switch to start the script
+RC6_OPTION 300
+
+# Disable auto-yaw behavior (do not override the pilot)
+WP_YAW_BEHAVIOR 0

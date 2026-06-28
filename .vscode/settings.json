@@ -15,6 +15,7 @@
         "notify",
         "param",
         "Parameter",
+        "poscontrol",
         "rangefinder",
         "rc",
         "relay",
