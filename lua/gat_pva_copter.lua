@@ -8,7 +8,6 @@ local DT = 1.0 / RUN_HZ
 local GUIDED_MODE = 4 -- Copter GUIDED mode number
 
 -- Configuration
--- TODO pull these values from parameters, if possible
 local P_GAIN_Z = 1.0 -- Proportional gain for vertical correction
 local MAX_VEL_Z = 2.0 -- max vertical velocity correction in m/s
 
@@ -60,14 +59,14 @@ local function update()
         gcs:send_text(6, string.format("GAT: Activated. Target HAGL: %.1fm", target_hagl_m))
     end
 
-    -- 1. Read Cruise Speed parameter
+    -- Get forward speed
     local wp_spd_cms = param:get("WP_SPD")
     if not wp_spd_cms then
         wp_spd_cms = 500 -- Default to 5m/s
     end
     local cruise_speed_ms = wp_spd_cms * 0.01
 
-    -- 2. XY Control (Cruise Control)
+    -- XY control
     local ahrs_yaw = ahrs:get_yaw_rad()
     local vel_target_ne = Vector2f()
     vel_target_ne:x(math.cos(ahrs_yaw) * cruise_speed_ms)
@@ -80,8 +79,8 @@ local function update()
     target_pos_ne:x(target_pos_ne:x() + vel_target_ne:x() * DT)
     target_pos_ne:y(target_pos_ne:y() + vel_target_ne:y() * DT)
 
-    -- 3. Z Control (Terrain Following)
-    local current_hagl_m = 0
+    -- Z control
+    local current_hagl_m
     if rangefinder:has_data_orient(25) and rangefinder:status_orient(25) == 4 then
         current_hagl_m = rangefinder:distance_orient(25)
     else
@@ -116,7 +115,7 @@ local function update()
         poscontrol:set_posvelaccel_offset(pos_offset, vel_offset, accel_offset)
     end
 
-    -- 4. Send Base PVA target
+    -- Send base PVA target
     local pos_target = Vector3f()
     pos_target:x(target_pos_ne:x())
     pos_target:y(target_pos_ne:y())
@@ -132,7 +131,6 @@ local function update()
     accel_target:y(accel_target_ne:y())
     accel_target:z(0)
 
-    -- bool set_target_posvelaccel_NED(Vector3f pos, Vector3f vel, Vector3f accel, bool use_yaw, float yaw_deg, bool use_yaw_rate, float yaw_rate_degs, bool yaw_relative)
     -- use_yaw is false, so user can control yaw with RC sticks (subject to GUIDED_OPTIONS)
     vehicle:set_target_posvelaccel_NED(pos_target, vel_target, accel_target, false, 0, false, 0, false)
 

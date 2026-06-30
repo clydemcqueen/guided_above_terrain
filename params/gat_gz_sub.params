@@ -27,7 +27,8 @@ BTN3_SFUNCTION      13          # shift-Y            SURFTRAK mode
 # Reduce baro noise
 SIM_BARO_RND 0.02
 
-# Set reasonable GUIDED mode speeds
-WP_SPD_DN 0.3
-WP_SPD_UP 0.3
-WP_SPD 0.2
+# WP_SPD sets the max xy speed that will be allowed in GUIDED PVA mode, leave it at the default
+# WP_SPD 1.0
+
+# Set the forward speed
+SCR_USER1 0.5

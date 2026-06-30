@@ -26,7 +26,7 @@
 # Enable scripting
 SCR_ENABLE 1
 
-# Set the WP speeds
+# The WP speeds set the max speeds that will be allowed in GUIDED mode
 WP_SPD_DN 1.0
 WP_SPD_UP 1.0
 WP_SPD 5.0
