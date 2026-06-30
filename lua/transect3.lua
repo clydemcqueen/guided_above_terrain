@@ -153,7 +153,7 @@ local function update_guided_mode(rf_reading)
 
   -- All good, send a posvel target
   local success = set_posvel_target(pos)
-  
+
   -- Log results in a GUIded Terrain table
   logger:write("GUIT",
       "RFTarg,RFRead,Head,RFOk,SubT,Succ",

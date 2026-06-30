@@ -67,9 +67,7 @@ local function update()
     local yaw_rate_rads = gyro and gyro:z() or 0
 
     -- If stick is in deadband and rotation has stopped, lock the yaw
-    if yaw_input == 0 and math.abs(yaw_rate_rads) < 0.05 then
-        -- Keep target_yaw_rad locked
-    else
+    if yaw_input ~= 0 or math.abs(yaw_rate_rads) >= 0.05 then
         target_yaw_rad = ahrs_yaw
     end
 
@@ -80,9 +78,7 @@ local function update()
 
     local accel_target_ne = Vector2f()
     -- Calculate feed-forward centripetal acceleration to improve turn tracking
-    local gyro = ahrs:get_gyro()
     if gyro then
-        local yaw_rate_rads = gyro:z()
         accel_target_ne:x(-vel_target_ne:y() * yaw_rate_rads)
         accel_target_ne:y(vel_target_ne:x() * yaw_rate_rads)
     end
@@ -155,12 +151,16 @@ local function update()
     accel_target:y(accel_target_ne:y())
     accel_target:z(0)
 
-    -- bool set_target_posvelaccel_NED(Vector3f pos, Vector3f vel, Vector3f accel, bool use_yaw, float yaw_deg, bool use_yaw_rate, float yaw_rate_degs, bool yaw_relative)
+    -- bool set_target_posvelaccel_NED(Vector3f pos, Vector3f vel, Vector3f accel,
+    --                                 bool use_yaw, float yaw_deg, bool use_yaw_rate,
+    --                                 float yaw_rate_degs, bool yaw_relative)
     -- use_yaw is false, so user can control yaw with RC sticks (subject to GUIDED_OPTIONS)
     vehicle:set_target_posvelaccel_NED(pos_target, vel_target, accel_target, false, 0, false, 0, false)
 
     -- Log key vertical data for analysis
-    logger:write('GATD', 'HAGL,Offset,TargZ,YInp,YRat,TYaw', 'ffffff', 'mmm-rr', '------', current_hagl_m, offset_z, target_pos_z, yaw_input, yaw_rate_rads, target_yaw_rad)
+    logger:write('GATD', 'HAGL,Offset,TargZ,YInp,YRat,TYaw', 'ffffff', 'mmm-rr',
+                 '------', current_hagl_m, offset_z, target_pos_z, yaw_input,
+                 yaw_rate_rads, target_yaw_rad)
 
     return update, 1000 / RUN_HZ
 end
