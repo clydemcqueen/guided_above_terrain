@@ -1,7 +1,8 @@
 # Parameters to test gat_pva_sub.lua in Gazebo
 
 # Setup is mostly described in bluerov2_gz README. My super-terse notes:
-# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, ping_sonar}; set up env vars, cp gat_pva_sub.lua to scripts dir
+# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, ping_sonar}; set up env vars
+# cd scripts; ln -s ~/projects/guided_above_terrain/lua/gat_pva_sub.lua gat_pva_sub.lua
 
 # Shells:
 # gz sim -v 3 -r bluerov2_ping.world
