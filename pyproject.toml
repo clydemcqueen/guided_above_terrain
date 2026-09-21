@@ -1,0 +1,16 @@
+[tool.pyrefly]
+python-interpreter-path = ".venv/bin/python"
+search-path = [
+    "tests",
+]
+replace-imports-with-any = [
+    "pymavlink",
+    "pymavlink.*",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E402"]

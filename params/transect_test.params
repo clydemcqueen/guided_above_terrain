@@ -1,0 +1,42 @@
+# Parameters to test transect.lua in automated SITL autotest, for ArduPilot 4.7
+#
+# Uses sub_test_synthetic_seafloor.lua for synthetic bottom bathymetry model.
+
+SCR_ENABLE          1
+
+# Set up synthetic seafloor model (sub_test_synthetic_seafloor.lua)
+SCR_USER1           1           # Bundle 1: clean simple ridge
+SCR_USER2           15          # Seafloor depth in meters
+SCR_USER3           101         # Output log records and true range statustext
+SCR_USER4           2.0         # Target range in meters
+
+# Set up Lua synthetic rangefinder backend, adjust min and max
+RNGFND1_TYPE        36
+RNGFND1_MAX         50.0
+RNGFND1_MIN         0.2
+
+BTN0_FUNCTION       1.0         # shift
+BTN2_SFUNCTION      11          # shift-X            GUIDED mode
+BTN3_SFUNCTION      13          # shift-Y            SURFTRAK mode
+BTN11_SFUNCTION     108         # shift-dpad-up      script_1: increment rf_target by 10 cm
+BTN12_SFUNCTION     109         # shift-dpad-down    script_2: decrement rf_target by 10 cm
+BTN13_SFUNCTION     110         # shift-dpad-left    script_3: decrement speed by 5 cm/s
+BTN14_SFUNCTION     111         # shift-dpad-right   script_4: increment speed by 5 cm/s
+
+# Allow test harness (MAVLink sysid 250) to send joystick MANUAL_CONTROL button commands
+MAV_GCS_SYSID       250
+
+# Reduce baro noise
+SIM_BARO_RND        0.02
+
+# WP_SPD sets the max xy speed ceiling that will be allowed in GUIDED PVA mode
+WP_SPD              1.0
+
+# Typical Lutris and Nereo parameters
+PILOT_SPEED_UP      50          # SURFTRAK uses PILOT_ parameters in cm
+PILOT_SPEED_DN      50
+PILOT_ACCEL_Z       500
+WP_SPD_UP           0.5         # GUIDED uses WP_ parameters in m
+WP_SPD_DN           0.5
+WP_ACC_Z            5.0
+PSC_D_JERK          8.0         # Both modes use PSC_ parameters in m

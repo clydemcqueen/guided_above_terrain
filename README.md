@@ -18,46 +18,60 @@ ArduSub's GUIDED mode to move the ROV forward at a constant speed, while maintai
 seafloor. This also neatly solves the problem of strafing currents.
 
 There are two tasks:
-* Add support for the ABOVE_TERRAIN frame to GUIDED mode in ArduSub, this is addressed in [this ArduPilot PR](https://github.com/ArduPilot/ardupilot/pull/27767)
-* Write a Lua script to use GUIDED to control the forward velocity, this is addressed in [transect3.lua](lua/transect3.lua)
+* Extend ArduSub GUIDED mode to include acceleration targets, and expose the ArduSub position controller API to Lua scripts.
+This is addressed in [this ArduPilot PR](https://github.com/ArduPilot/ardupilot/pull/33609).
+* Write a Lua script to implement terrain following in GUIDED mode, this is addressed in [transect.lua](lua/transect.lua).
 
-## transect3.lua
+## transect.lua
 
-As the name suggests, the transect3.lua script is our third iteration of the transect control script.
-This version implements a "sticky" rangefinder target that works across both SURFTRAK and GUIDED modes.
+The `transect.lua` script implements a "sticky" rangefinder target that works across both SURFTRAK and GUIDED modes, using ArduSub's PosVelAccel and position controller Lua bindings.
+
 Typical operation looks like this:
+* Use STABILIZE or DEPTH_HOLD to motor to the transect starting point, and dive to the target depth.
+* Engage SURFTRAK mode (mode 21). The script captures the rangefinder reading (or current SURFTRAK target) rounded to the nearest 10 cm and stores it as the sticky target.
+* Adjust the rangefinder target up/down in 10 cm increments using joystick buttons mapped to script functions 1 and 2 (`k_script_1` / `k_script_2`).
+* Adjust cruise speed up/down in 0.1 m/s increments using joystick buttons mapped to script functions 3 and 4 (`k_script_3` / `k_script_4`).
+* Point in the direction of travel and engage GUIDED mode (mode 4).
+* In GUIDED mode, `transect.lua` executes a 20 Hz PosVelAccel control loop:
+  - Ramps horizontal velocity along heading at `ACC_XY = 0.5 m/s²` up to `GAT_SPD` and feeds position, velocity, and acceleration targets to `vehicle:set_target_posvelaccel_NED()`.
+  - Computes vertical error relative to the sticky rangefinder target and applies vertical position and velocity offsets to `poscontrol:set_posvelaccel_offset()`.
+  - Supports pilot yaw stick steering during the transect.
+  - Logs transect state to the DataFlash `GUIT` log table (`RFTarg`, `RFRead`, `Head`, `TargZ`, `OffZ`, `Spd`).
+* Switch to SURFTRAK, DEPTH_HOLD, or STABILIZE to manually negotiate obstacles. The sticky target is preserved and reapplied when returning to SURFTRAK or GUIDED.
+* The rangefinder target is forgotten and reset when the ROV is disarmed.
 
-* Use STABILIZE or DEPTH_HOLD to motor to the transect starting point, and dive to the target depth
-* Engage SURFTRAK mode. This will set the rangefinder target to the current rangefinder reading, rounded to the nearest 10 cm
-* Adjust the rangefinder target up/down using the joystick
-* Point in the direction of travel and start the transect by engaging GUIDED mode
-* The ROV will move forward at a constant speed. Adjust the heading to move around obstacles as needed
-* Switch to SURFTRAK, DEPTH_HOLD, or STABILIZE mode to move up and over a tricky obstacle. Select GUIDED mode to resume the transect
-* The rangefinder target is maintained across all mode transitions. It is reset when the ROV is disarmed
+### Joystick Button Mapping
 
-## Test Results
+Assign the following button functions in your ArduSub parameter configuration (or via QGroundControl / BlueOS):
+* **Button -> Function 108 (`k_script_1`)**: Increment rangefinder target (+0.1 m)
+* **Button -> Function 109 (`k_script_2`)**: Decrement rangefinder target (-0.1 m)
+* **Button -> Function 110 (`k_script_3`)**: Decrement forward speed (`GAT_SPD`, -0.05 m/s)
+* **Button -> Function 111 (`k_script_4`)**: Increment forward speed (`GAT_SPD`, +0.05 m/s)
 
-We ran the following tests:
-* There is an autotest in the PR
-* We ran SITL tests with [these parameters](params/gat_sitl.params)
-* We Gazebo tests using [this model](https://github.com/clydemcqueen/bluerov2_gz/blob/main/models/bluerov2_ping/BlueROV2Ping.md) and [these parameters](params/gat_gz_sitl.params)
+## Automated SITL Testing
 
-We also ran several live tests with a BlueROV2 off Pier 59 in Seattle, using these parameters:
-~~~
-PSC_JERK_Z 8.0          # force KPa = 1.6, KPv = 0.8
-PILOT_ACCEL_Z 500
-WPNAV_ACCEL_Z 500
-SURFTRAK_DEPTH -100     # min surftrak depth 1m
-LOG_DISARMED 1
-LOG_BITMASK 180222      # Also log PSCx for debugging
-WPNAV_SPEED     20      # move forward at 20 cms
-WPNAV_SPEED_UP  30      # ascend at 30 cms
-WPNAV_SPEED_DN  30      # descend at 30 cms
-BTN11_SFUNCTION  108 # inc rf target by 10 cm (up)
-BTN12_SFUNCTION  109 # dec rf target by 10 cm (down)
-BTN13_SFUNCTION  111 # inc fwd speed by 10 cms (right)
-BTN14_SFUNCTION  110 # dec fwd speed by 10 cms (left)
-~~~
-Note: some parameter names and units have changed since this live test.
+An automated test suite is provided in the `tests/` directory to verify `transect.lua` against ArduSub SITL without checking any test code into the upstream ArduPilot repository.
 
-A trimmed dataflash log for the 7-Jan-2026 test is available [here](logs/00000029_filtered.BIN).
+### Prerequisites
+
+* ArduSub SITL binary compiled with Lua scripting support (from PR #33609 or master):
+  ```bash
+  cd /path/to/ardupilot
+  ./waf configure --board sitl --enable-scripting
+  ./waf sub
+  ```
+* Python 3 with `pymavlink` and ArduPilot autotest dependencies installed (or use the Python virtual environment located in your ArduPilot directory).
+
+### Running the Test
+
+Set `ARDUPILOT_HOME` to point to your ArduPilot build directory:
+
+```bash
+export ARDUPILOT_HOME=/path/to/ardupilot
+python3 tests/run_sitl_test.py
+```
+
+The runner automatically locates `ardusub` at `$ARDUPILOT_HOME/build/sitl/bin/ardusub`.
+
+Optional argument:
+* `--speedup <multiplier>`: Run simulation faster than real-time (default: `10.0`).
