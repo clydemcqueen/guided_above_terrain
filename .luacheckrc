@@ -1,5 +1,5 @@
-{
-    "Lua.diagnostics.globals": [
+stds.ardupilot = {
+    globals = {
         "ahrs",
         "arming",
         "baro",
@@ -27,5 +27,7 @@
         "Vector2f",
         "Vector3f",
         "vehicle"
-    ]
+    }
 }
+
+std = "lua53+ardupilot"

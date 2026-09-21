@@ -1,0 +1,21 @@
+name: Luacheck
+
+on: [push, pull_request]
+
+jobs:
+  luacheck:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+    - name: Install luacheck
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y lua-check
+    - name: Install pre-commit
+      run: pip install pre-commit
+    - name: Run pre-commit hooks
+      run: pre-commit run --all-files
