@@ -14,6 +14,9 @@
 # ln -s $HOME/host_ws/guided_above_terrain/lua/get_rangefinder.lua get_rangefinder.lua
 # ln -s $HOME/host_ws/guided_above_terrain/lua/transect4.lua transect4.lua
 
+# Simulate a 1 m/s (2 knot) current
+# gz topic -t /ocean_current -m gz.msgs.Vector3d -p 'x: 1.0, y: 0.0, z: 0.0'
+
 SCR_ENABLE          1
 
 # Set up Gazebo (JSON) rangefinder, adjust the min and max
