@@ -2,6 +2,8 @@
     Use GUIDED mode to move forward at a constant speed while following the terrain.
     Maintain a sticky rangefinder target across all modes.
 
+    Works with ArduSub 4.7.2.
+
     The rangefinder target...
     * starts as nil
     * gets set the first time you enter GUIDED or SURFTRAK mode
@@ -59,15 +61,11 @@ local wp_spd_p = Parameter("WP_SPD")
 local wp_spd_up_p = Parameter("WP_SPD_UP")
 local wp_spd_dn_p = Parameter("WP_SPD_DN")
 local wp_acc_z_p = Parameter("WP_ACC_Z")
-
-if not surftrak_depth_p or not gat_spd_p or not gat_spd_inc_p
-  or not gat_rf_inc_p or not gat_clr_min_p or not gat_clr_slow_p or not wp_spd_p then
-  gcs:send_text(3, "transect: parameter missing, exit")
-  return
-end
+local rcmap_yaw_p = Parameter("RCMAP_YAW")
 
 local RUN_HZ = 20                   -- update frequency (20 Hz)
 local MAX_DT = 0.5                  -- cap dt to avoid large integration step on stall
+local ZERO_VEC = Vector3f()
 
 local GUIDED_MODE_NUM = 4           -- sub GUIDED mode number
 local SURFTRAK_MODE_NUM = 21        -- sub SURFTRAK mode number
@@ -80,7 +78,6 @@ local P_GAIN_Z = 1.0                -- proportional gain for vertical terrain fo
 
 -- Pilot controls
 local SPEED_MIN = 0.1
-local SPEED_MAX = 1.0               -- fallback upper limit if WP_SPD is unavailable
 local RF_TARGET_MIN = 0.5
 local RF_TARGET_MAX = 50.0
 
@@ -101,6 +98,7 @@ local vel_target = Vector3f()       -- 3D velocity target in m/s (NED)
 local acc_target = Vector3f()       -- 3D acceleration target in m/s^2 (NED)
 local commanded_speed = 0           -- dynamic commanded forward speed after clearance scaling
 local rf_lost = false               -- true if rangefinder reading has dropped out (>1.0s)
+local last_valid_rf                 -- cached last valid rangefinder reading
 
 -- Timestamps for timeouts
 local last_rf_time_ms = 0           -- timestamp of last valid rangefinder reading
@@ -118,14 +116,14 @@ local function clamp(val, min_val, max_val)
   return val
 end
 
-local function get_max_speed()
-  return (wp_spd_p and wp_spd_p:get()) or SPEED_MAX
+local function round(val, inc)
+  return math.floor(val / inc + 0.5) * inc
 end
 
 -- Clamp initial GAT_SPD if it exceeds WP_SPD
 local init_cruise_speed = gat_spd_p:get()
-if init_cruise_speed > get_max_speed() then
-  gat_spd_p:set(get_max_speed())
+if init_cruise_speed > wp_spd_p:get() then
+  gat_spd_p:set(wp_spd_p:get())
 end
 
 -- Throttled RFTarget telemetry sender (sends immediately on change or at 4 Hz)
@@ -139,10 +137,9 @@ local function send_rf_target_telemetry(force)
   end
 end
 
--- If sub is shallower than SURFTRAK_DEPTH (default -50 cm, i.e. 0.5m depth), return true
+-- If sub is shallower than SURFTRAK_DEPTH, return true
 local function above_surftrak_depth()
-  local surftrak_depth_cm = (surftrak_depth_p and surftrak_depth_p:get()) or -50
-  local min_depth = math.abs(surftrak_depth_cm) * 0.01
+  local min_depth = math.abs(surftrak_depth_p:get()) * 0.01
 
   local current_pos = ahrs:get_relative_position_NED_origin()
   if current_pos then
@@ -166,7 +163,7 @@ end
 -- Set rangefinder target, rounded to nearest GAT_RF_INC
 local function set_rf_target(proposed_rf_target)
   local rf_inc = math.max(0.01, gat_rf_inc_p:get())
-  local rounded_target = math.floor(math.floor(proposed_rf_target / rf_inc + 0.5) * rf_inc * 100.0 + 0.5) / 100.0
+  local rounded_target = round(proposed_rf_target, rf_inc)
   rf_target = clamp(rounded_target, RF_TARGET_MIN, RF_TARGET_MAX)
   gcs:send_text(6, string.format("transect: set rangefinder target to %.2f m", rf_target))
 
@@ -177,16 +174,11 @@ local function set_rf_target(proposed_rf_target)
 end
 
 local function respond_to_joystick_buttons()
-  local count = {}
-  for i = 1, 4 do
-    count[i] = sub:get_and_clear_button_count(i)
-  end
-
   -- Increment or decrement GAT_SPD (clamped to WP_SPD)
-  local net_speed_inc = count[BTN_INC_SPEED] - count[BTN_DEC_SPEED]
+  local net_speed_inc = sub:get_and_clear_button_count(BTN_INC_SPEED) - sub:get_and_clear_button_count(BTN_DEC_SPEED)
   if net_speed_inc ~= 0 then
     local speed_inc = math.max(0.01, gat_spd_inc_p:get())
-    local max_speed = get_max_speed()
+    local max_speed = wp_spd_p:get()
     local cur_speed = gat_spd_p:get()
     local new_speed = clamp(cur_speed + net_speed_inc * speed_inc, SPEED_MIN, max_speed)
     gat_spd_p:set(new_speed)
@@ -194,7 +186,8 @@ local function respond_to_joystick_buttons()
   end
 
   -- Increment or decrement rf_target
-  local net_rf_inc = count[BTN_INC_RF_TARGET] - count[BTN_DEC_RF_TARGET]
+  local net_rf_inc = sub:get_and_clear_button_count(BTN_INC_RF_TARGET) -
+    sub:get_and_clear_button_count(BTN_DEC_RF_TARGET)
   if net_rf_inc ~= 0 and rf_target ~= nil then
     local rf_inc = math.max(0.01, gat_rf_inc_p:get())
     set_rf_target(rf_target + net_rf_inc * rf_inc)
@@ -208,6 +201,7 @@ local function reset_guided_controller()
   rf_lost = false
   last_rf_lost_warn_ms = 0
   last_prereq_warn_ms = 0
+  last_valid_rf = nil
   -- Clear targets and ensure AC_PosControl offset is zeroed
   pos_target:x(0)
   pos_target:y(0)
@@ -218,15 +212,15 @@ local function reset_guided_controller()
   acc_target:x(0)
   acc_target:y(0)
   acc_target:z(0)
-  poscontrol:set_posvelaccel_offset(Vector3f(), Vector3f(), Vector3f())
+  poscontrol:set_posvelaccel_offset(ZERO_VEC, ZERO_VEC, ZERO_VEC)
 end
 
 local function update_guided_mode(rf_reading, dt)
-  local current_pos = ahrs:get_relative_position_NED_origin()
-  local current_vel = ahrs:get_velocity_NED()
   local now_ms = millis()
 
   if not guided_active then
+    local current_pos = ahrs:get_relative_position_NED_origin()
+    local current_vel = ahrs:get_velocity_NED()
     local send_prereq_warn = (prev_mode ~= GUIDED_MODE_NUM) or ((now_ms - last_prereq_warn_ms):tofloat() > 4000)
 
     -- Check prerequisites
@@ -275,17 +269,19 @@ local function update_guided_mode(rf_reading, dt)
     acc_target:z(0)
 
     -- Ensure any previous offset in poscontrol is cleared
-    poscontrol:set_posvelaccel_offset(Vector3f(), Vector3f(), Vector3f())
+    poscontrol:set_posvelaccel_offset(ZERO_VEC, ZERO_VEC, ZERO_VEC)
 
     guided_active = true
     last_rf_time_ms = now_ms
+    last_valid_rf = rf_reading
     rf_lost = false
-    local cruise_speed = clamp(gat_spd_p:get(), SPEED_MIN, get_max_speed())
+    local cruise_speed = clamp(gat_spd_p:get(), SPEED_MIN, wp_spd_p:get())
     gcs:send_text(6, string.format("transect: GUIDED active, target %.2fm, speed %.2fm/s", rf_target, cruise_speed))
   end
 
   if rf_reading ~= nil then
     last_rf_time_ms = now_ms
+    last_valid_rf = rf_reading
     if rf_lost then
       rf_lost = false
       gcs:send_text(6, "transect: rangefinder recovered, forward resumed")
@@ -303,8 +299,7 @@ local function update_guided_mode(rf_reading, dt)
   end
 
   -- Pilot yaw steering: inspect yaw channel input
-  local yaw_channel_num = param:get('RCMAP_YAW') or 4
-  local yaw_chan = rc:get_channel(yaw_channel_num)
+  local yaw_chan = rc:get_channel(rcmap_yaw_p:get())
   local yaw_input = yaw_chan and yaw_chan:norm_input_dz() or 0
 
   local gyro = ahrs:get_gyro()
@@ -316,7 +311,7 @@ local function update_guided_mode(rf_reading, dt)
   end
 
   -- Desired forward speed (clamped to WP_SPD)
-  local base_speed = clamp(gat_spd_p:get(), SPEED_MIN, get_max_speed())
+  local base_speed = clamp(gat_spd_p:get(), SPEED_MIN, wp_spd_p:get())
 
   -- Floor clearance & collision prevention (Task 1.2)
   local clr_min = gat_clr_min_p:get()
@@ -335,15 +330,18 @@ local function update_guided_mode(rf_reading, dt)
   local speed_scale = 1.0
   if rf_dropout then
     speed_scale = 0.0
-  elseif rf_reading ~= nil then
-    if rf_reading <= clr_min then
-      speed_scale = 0.0
-      if (now_ms - last_low_clr_warn_ms):tofloat() > 4000 then
-        last_low_clr_warn_ms = now_ms
-        gcs:send_text(4, string.format("transect: low clearance (%.2fm), forward stopped", rf_reading))
+  else
+    local rf_check = rf_reading or last_valid_rf
+    if rf_check ~= nil then
+      if rf_check <= clr_min then
+        speed_scale = 0.0
+        if (now_ms - last_low_clr_warn_ms):tofloat() > 4000 then
+          last_low_clr_warn_ms = now_ms
+          gcs:send_text(4, string.format("transect: low clearance (%.2fm), forward stopped", rf_check))
+        end
+      elseif clr_slow > clr_min and rf_check < clr_slow then
+        speed_scale = (rf_check - clr_min) / (clr_slow - clr_min)
       end
-    elseif clr_slow > clr_min and rf_reading < clr_slow then
-      speed_scale = (rf_reading - clr_min) / (clr_slow - clr_min)
     end
   end
 
@@ -382,7 +380,7 @@ local function update_guided_mode(rf_reading, dt)
   pos_target:y(pos_target:y() + (vel_target_old_y + vel_target_new_y) * 0.5 * dt)
 
   -- Vertical terrain following (bounded to autopilot limits & smoothed with ACC_Z)
-  local rf_current = rf_reading or rf_target
+  local rf_current = rf_dropout and rf_target or (rf_reading or last_valid_rf or rf_target)
   local rf_error = rf_target - rf_current
 
   local max_climb_speed = (wp_spd_up_p and wp_spd_up_p:get()) or 0.5
@@ -411,12 +409,12 @@ local function update_guided_mode(rf_reading, dt)
   pos_target:z(pos_target:z() + (vel_target_old_z + vel_target_new_z) * 0.5 * dt)
 
   -- Enforce SURFTRAK_DEPTH minimum depth ceiling
-  local surftrak_depth_cm = (surftrak_depth_p and surftrak_depth_p:get()) or -50
-  local min_depth = math.abs(surftrak_depth_cm) * 0.01
+  local min_depth = math.abs(surftrak_depth_p:get()) * 0.01
   if pos_target:z() < min_depth then
     pos_target:z(min_depth)
     if vel_target:z() < 0 then
       vel_target:z(0)
+      acc_target:z(0)
     end
   end
 
@@ -460,7 +458,7 @@ local function update_surftrak_mode(rf_reading)
       -- In steady SURFTRAK, if pilot changed the target via throttle stick,
       -- sync our sticky target so it carries over to GUIDED mode.
       local rf_inc = math.max(0.01, gat_rf_inc_p:get())
-      local current_target = math.floor(math.floor(sub_target_cm * 0.01 / rf_inc + 0.5) * rf_inc * 100.0 + 0.5) / 100.0
+      local current_target = round(sub_target_cm * 0.01, rf_inc)
       if math.abs(current_target - rf_target) >= (rf_inc * 0.9) then
         set_rf_target(current_target)
         set_surftrak_target_cm(rf_target * 100.0)
@@ -515,6 +513,7 @@ local function update()
     if guided_active then
       reset_guided_controller()
     end
+    last_valid_rf = nil
     surftrak_active = false
     return update, 1000 / RUN_HZ
   end
@@ -539,6 +538,7 @@ local function update()
       update_surftrak_mode(rf_reading)
     else
       surftrak_active = false
+      send_rf_target_telemetry(false)
     end
   end
 
