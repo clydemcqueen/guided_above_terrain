@@ -150,7 +150,7 @@ class AutoTestTransect(ardusub.AutoTestSub):
             )
 
             # Test joystick button adjustments in GUIDED mode
-            # Inc rf_target via BTN11 (shift-dpad-up -> script_1, GAT_RF_INC is 0.05)
+            # Inc rf_target via BTN11 (shift-dpad-up -> script_2, GAT_RF_INC is 0.05)
             inc_target = round(current_target + 0.05, 2)
             self.pulse_button_and_wait(
                 11,
@@ -159,7 +159,7 @@ class AutoTestTransect(ardusub.AutoTestSub):
                 shift=True,
             )
 
-            # Dec rf_target back via BTN12 (shift-dpad-down -> script_2)
+            # Dec rf_target back via BTN12 (shift-dpad-down -> script_3)
             self.pulse_button_and_wait(
                 12,
                 "BTN12 (shift-dpad-down: dec rf_target)",
@@ -167,7 +167,7 @@ class AutoTestTransect(ardusub.AutoTestSub):
                 shift=True,
             )
 
-            # Inc speed via BTN14 (shift-dpad-right -> script_4, GAT_SPD_INC is 0.05)
+            # Inc speed via BTN14 (shift-dpad-right -> script_1, GAT_SPD_INC is 0.05)
             inc_speed = round(speed + 0.05, 2)
             self.pulse_button_and_wait(
                 14,
@@ -176,7 +176,7 @@ class AutoTestTransect(ardusub.AutoTestSub):
                 shift=True,
             )
 
-            # Dec speed back via BTN13 (shift-dpad-left -> script_3)
+            # Dec speed back via BTN13 (shift-dpad-left -> script_4)
             self.pulse_button_and_wait(
                 13,
                 "BTN13 (shift-dpad-left: dec speed)",

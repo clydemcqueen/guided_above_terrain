@@ -5,8 +5,8 @@
     The rangefinder target...
     * starts as nil
     * gets set the first time you enter GUIDED or SURFTRAK mode
-    * is rounded to the nearest 5 cm (or GAT_RF_INC)
-    * can be adjusted up/down in 5 cm increments via joystick buttons
+    * is rounded to the nearest increment (GAT_RF_INC)
+    * can be adjusted up/down via joystick buttons
     * is sticky across all modes
     * is reset to nil if the sub is disarmed
 
@@ -20,10 +20,10 @@
     param set BTN0_FUNCTION    1.0         # shift
     param set BTN2_SFUNCTION   11          # shift-X            GUIDED mode
     param set BTN3_SFUNCTION   13          # shift-Y            SURFTRAK mode
-    param set BTN11_SFUNCTION  108         # shift-dpad-up      script_1: increment rf_target by 5 cm
-    param set BTN12_SFUNCTION  109         # shift-dpad-down    script_2: decrement rf_target by 5 cm
-    param set BTN13_SFUNCTION  110         # shift-dpad-left    script_3: decrement speed by 5 cm/s
-    param set BTN14_SFUNCTION  111         # shift-dpad-right   script_4: increment speed by 5 cm/s
+    param set BTN11_SFUNCTION  109         # shift-dpad-up      script_2: increment rf_target by GAT_RF_INC
+    param set BTN12_SFUNCTION  110         # shift-dpad-down    script_3: decrement rf_target by GAT_RF_INC
+    param set BTN13_SFUNCTION  111         # shift-dpad-left    script_4: decrement speed by GAT_SPD_INC
+    param set BTN14_SFUNCTION  108         # shift-dpad-right   script_1: increment speed by GAT_SPD_INC
 
     There are several custom GAT parameters:
     * GAT_SPD sets the forward speed during GUIDED mode (default 0.2 m/s)
@@ -84,10 +84,10 @@ local SPEED_MAX = 1.0               -- fallback upper limit if WP_SPD is unavail
 local RF_TARGET_MIN = 0.5
 local RF_TARGET_MAX = 50.0
 
-local BTN_INC_RF_TARGET = 1         -- Script button 1 (Function 108)
-local BTN_DEC_RF_TARGET = 2         -- Script button 2 (Function 109)
-local BTN_DEC_SPEED = 3             -- Script button 3 (Function 110)
-local BTN_INC_SPEED = 4             -- Script button 4 (Function 111)
+local BTN_INC_RF_TARGET = 2         -- Script button 2 (Function 109)
+local BTN_DEC_RF_TARGET = 3         -- Script button 3 (Function 110)
+local BTN_DEC_SPEED = 4             -- Script button 4 (Function 111)
+local BTN_INC_SPEED = 1             -- Script button 1 (Function 108)
 
 -- Controller state variables
 local prev_mode                     -- track vehicle mode transitions

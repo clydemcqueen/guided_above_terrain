@@ -84,6 +84,9 @@ def main():
     print(f"Seafloor bundle:      {args.bundle}")
     print(f"Running {len(selected_tests)} test(s): {[t.name for t in selected_tests]}")
 
+    # Ensure buildlogs directory exists
+    os.makedirs(tester.buildlogs_dirpath(), exist_ok=True)
+
     # AutoTest expects cwd to be the ArduPilot root
     old_cwd = os.getcwd()
     os.chdir(ardupilot_home)
