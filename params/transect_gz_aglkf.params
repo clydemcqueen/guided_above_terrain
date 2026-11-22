@@ -1,0 +1,64 @@
+# Parameters to test transect.lua in Gazebo, for ArduPilot 4.7 -- modified for use with agl_kf
+
+# Setup is mostly described in bluerov2_gz README.
+# Use colcon to build {ardupilot_gazebo, ros2}, {bluerov2_gz, main}; set up env vars, cp transect.lua to scripts dir
+# ArduPilot-4.7 has a bug that affects Gazebo. There is a fix on master: https://github.com/ArduPilot/ardupilot/pull/33342
+
+# Shells:
+# gz sim -v 3 -r bluerov2_ping.world
+# ../Tools/autotest/sim_vehicle.py -L RATBeach -v ArduSub -f vectored --model=JSON --out=udp:0.0.0.0:14550 --wipe --add-param-file=$HOME/host_ws/guided_above_terrain/params/transect_gz_aglkf.params
+# ./Cockpit-linux-x86_64-1.19.0.AppImage
+
+# Setting up scripts:
+# mkdir scripts; cd scripts
+# ln -s $HOME/host_ws/guided_above_terrain/lua/get_rangefinder.lua get_rangefinder.lua
+# ln -s $HOME/host_ws/guided_above_terrain/lua/transect4.lua transect4.lua
+
+# Simulate a 1 m/s (2 knot) current
+# gz topic -t /ocean_current -m gz.msgs.Vector3d -p 'x: 1.0, y: 0.0, z: 0.0'
+
+SCR_ENABLE          1
+
+# Set up Gazebo (JSON) rangefinder, adjust the min and max
+RNGFND1_TYPE        100
+RNGFND1_FUNCTION    0
+RNGFND1_MAX         50.0
+RNGFND1_MIN         0.2
+
+# Follow bluerov2_ping model
+RNGFND1_POS_X       -0.18
+RNGFND1_POS_Z       -0.095
+
+# Controller button assignments for QGC
+# For Cockpit: upload dbl-mapping.json
+BTN0_FUNCTION    1    # A                   shift
+BTN0_SFUNCTION   1    # shift A             shift
+BTN1_FUNCTION    5    # B                   MANUAL
+BTN1_SFUNCTION   8    # shift B             POSHOLD
+BTN2_FUNCTION    7    # X                   ALT_HOLD
+BTN2_SFUNCTION   13   # shift X             SURFTRAK
+BTN3_FUNCTION    6    # Y                   STABILIZE
+BTN3_SFUNCTION   11   # shift Y             GUIDED
+
+BTN11_SFUNCTION  109  # shift-dpad-up       script_2
+BTN12_SFUNCTION  110  # shift-dpad-down     script_3
+BTN13_SFUNCTION  111  # shift-dpad-left     script_4
+BTN14_SFUNCTION  108  # shift-dpad-right    script_1
+
+# Reduce baro noise
+SIM_BARO_RND        0.02
+
+# WP_SPD sets the max xy speed ceiling that will be allowed in GUIDED PVA mode
+WP_SPD              1.0
+
+# Enable agl_kf
+SURFTRAK_FILT       1
+
+# Faster agl_kf parameters!
+PILOT_SPEED_UP      200         # SURFTRAK uses PILOT_ parameters in cm
+PILOT_SPEED_DN      110
+PILOT_ACCEL_Z       400
+WP_SPD_UP           2.0         # GUIDED uses WP_ parameters in m
+WP_SPD_DN           1.1
+WP_ACC_Z            4.0
+PSC_D_JERK          20.0        # Both modes use PSC_ parameters in m
